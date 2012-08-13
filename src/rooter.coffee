@@ -6,9 +6,9 @@ hash =
     hash = "/" if hash is ""
     fn hash for fn in rooter.hash.listeners
     return
-  value: (h) ->
-    if h
-      window.location.hash = h
+  value: (newHash) ->
+    if newHash
+      window.location.hash = newHash
     return window.location.hash.replace '#', ''
 
 hashTimer =
@@ -18,10 +18,10 @@ hashTimer =
     hash = "/" if hash is ""
     fn hash for fn in rooter.hash.listeners
     return
-  value: (h) ->
-    if h
-      rooter.hash.lastHash = h
-      window.location.hash = h
+  value: (newHash) ->
+    if newHash
+      rooter.hash.lastHash = newHash
+      window.location.hash = newHash
     return window.location.hash.replace '#', ''
 
   lastHash: null
@@ -49,20 +49,37 @@ rooter =
       #.replace(/\*([\w\d]+)/g, '(.*?)') # splat
 
     rooter.routes[expr] =
-      names: expr.match /:([\w\d]+)/g
+      paramNames: expr.match /:([\w\d]+)/g
       pattern: new RegExp pattern
       fn: fn
+      beforeFilters: []
     return
 
+  runBeforeFilters: (destination, routeInput, cb) ->
+    runFilters = (filterArray) ->
+      return cb null if filterArray.length is 0
+      filterArray.shift() routeInput, (err) ->
+        return cb err if err
+        runFilters filterArray
+
+    filters = destination.beforeFilters.slice 0
+    runFilters filters
+
   test: (hash) ->
-    for r, d of rooter.routes
-      if m = d.pattern.exec hash
-        o = {}
-        if d.names
-          args = m[1..]
-          o[name.substring(1)] = args[idx] for name, idx in d.names
-        d.fn o
+    for url, destination of rooter.routes
+      if matches = destination.pattern.exec hash
+        routeInput = {}
+        if destination.paramNames
+          args = matches[1..]
+          routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
+        rooter.runBeforeFilters destination, routeInput, (err) ->
+          unless err
+            destination.fn routeInput
     return
+
+  addBeforeFilter: (expr, filter) ->
+    return unless rooter.routes[expr]
+    rooter.routes[expr].beforeFilters.push filter
 
 if typeof window.onhashchange isnt 'undefined'
   rooter.hash = hash
