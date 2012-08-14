@@ -92,7 +92,9 @@
         paramNames: expr.match(/:([\w\d]+)/g),
         pattern: new RegExp(pattern),
         setup: setup,
-        teardown: teardown,
+        teardown: teardown ? teardown : function(cb) {
+          return cb();
+        },
         beforeFilters: []
       };
     },

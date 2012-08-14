@@ -55,7 +55,7 @@ rooter =
       paramNames: expr.match /:([\w\d]+)/g
       pattern: new RegExp pattern
       setup: setup
-      teardown: teardown
+      teardown: if teardown then teardown else (cb) -> cb()
       beforeFilters: []
     return
 
