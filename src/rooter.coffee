@@ -2,10 +2,12 @@
 hash =
   listeners: []
   listen: (fn) -> rooter.hash.listeners.push fn
-  trigger: (hash=rooter.hash.value()) ->
-    hash = "/" if hash is ""
-    fn hash for fn in rooter.hash.listeners
-    return
+  trigger: (newHash=rooter.hash.value()) ->
+    newHash = "/" if newHash is ""
+    hash.pendingTeardown ->
+      hash.pendingTeardown = (cb) -> cb()
+      fn newHash for fn in rooter.hash.listeners
+      return
   value: (newHash) ->
     if newHash
       window.location.hash = newHash
@@ -36,12 +38,13 @@ hashTimer =
 rooter =
   # Routing
   init: ->
+    rooter.hash.pendingTeardown = (cb) -> cb()
     rooter.hash.listen rooter.test
     return rooter.hash.check() if rooter.hash.check
     rooter.hash.trigger()
 
   routes: {}
-  route: (expr, fn) ->
+  route: (expr, setup, teardown) ->
     pattern = "^#{expr}$"
     pattern = pattern
       .replace(/([?=,\/])/g, '\\$1') # escape
@@ -51,7 +54,8 @@ rooter =
     rooter.routes[expr] =
       paramNames: expr.match /:([\w\d]+)/g
       pattern: new RegExp pattern
-      fn: fn
+      setup: setup
+      teardown: teardown
       beforeFilters: []
     return
 
@@ -65,16 +69,17 @@ rooter =
     filters = destination.beforeFilters.slice 0
     runFilters filters
 
-  test: (hash) ->
+  test: (attemptedHash) ->
     for url, destination of rooter.routes
-      if matches = destination.pattern.exec hash
+      if matches = destination.pattern.exec attemptedHash
         routeInput = {}
         if destination.paramNames
           args = matches[1..]
           routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
         rooter.runBeforeFilters destination, routeInput, (err) ->
           unless err
-            destination.fn routeInput
+            hash.pendingTeardown = destination.teardown
+            destination.setup routeInput
     return
 
   addBeforeFilter: (expr, filter) ->
