@@ -11,6 +11,7 @@
       if (newHash == null) {
         newHash = rooter.hash.value();
       }
+      console.log("trigger called with hash " + newHash);
       if (newHash === "") {
         newHash = "/";
       }
@@ -19,6 +20,7 @@
         hash.pendingTeardown = function(cb) {
           return cb();
         };
+        console.log("about to call a listener function");
         _ref = rooter.hash.listeners;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           fn = _ref[_i];
@@ -47,6 +49,7 @@
       if (hash === "") {
         hash = "/";
       }
+      console.log("hashTimer got triggered");
       _ref = rooter.hash.listeners;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         fn = _ref[_i];
@@ -74,6 +77,7 @@
 
   rooter = {
     init: function() {
+      console.log("routes", rooter.routes);
       rooter.hash.pendingTeardown = function(cb) {
         return cb();
       };
@@ -89,6 +93,7 @@
       pattern = "^" + expr + "$";
       pattern = pattern.replace(/([?=,\/])/g, '\\$1').replace(/:([\w\d]+)/g, '([^/]*)');
       rooter.routes[expr] = {
+        name: expr,
         paramNames: expr.match(/:([\w\d]+)/g),
         pattern: new RegExp(pattern),
         setup: setup,
@@ -100,14 +105,20 @@
     },
     runBeforeFilters: function(destination, routeInput, cb) {
       var filters, runFilters;
+      console.log("about to run before filters for " + destination.name);
       runFilters = function(filterArray) {
+        console.log("destination is currently " + destination.name);
         if (filterArray.length === 0) {
+          console.log("done running filters, returning");
           return cb(null);
         }
         return filterArray.shift()(routeInput, function(err) {
+          console.log("ran a filter");
+          console.log("it returned: " + err);
           if (err) {
             return cb(err);
           }
+          console.log("gonna run another filter");
           return runFilters(filterArray);
         });
       };
@@ -129,10 +140,18 @@
               routeInput[name.substring(1)] = args[idx];
             }
           }
+          console.log("routes before calling filters", rooter.routes);
+          console.log("destination before calling filters: " + destination.name);
           rooter.runBeforeFilters(destination, routeInput, function(err) {
+            console.log("routes after calling filters", rooter.routes);
+            console.log("destination after calling filters: " + destination.name);
+            console.log("filters returned err: " + err);
             if (!err) {
+              console.log("passed filters, about to teardown");
               hash.pendingTeardown = destination.teardown;
-              return destination.setup(routeInput);
+              console.log("teardown complete");
+              destination.setup(routeInput);
+              return console.log("setup complete");
             }
           });
         }
