@@ -3,11 +3,9 @@ hash =
   listeners: []
   listen: (fn) -> rooter.hash.listeners.push fn
   trigger: (newHash=rooter.hash.value()) ->
-    console.log "trigger called with hash #{newHash}"
     newHash = "/" if newHash is ""
     hash.pendingTeardown ->
       hash.pendingTeardown = (cb) -> cb()
-      console.log "about to call a listener function"
       fn newHash for fn in rooter.hash.listeners
       return
   value: (newHash) ->
@@ -20,7 +18,6 @@ hashTimer =
   listen: (fn) -> rooter.hash.listeners.push fn
   trigger: (hash=rooter.hash.value()) ->
     hash = "/" if hash is ""
-    console.log "hashTimer got triggered"
     fn hash for fn in rooter.hash.listeners
     return
   value: (newHash) ->
@@ -41,7 +38,6 @@ hashTimer =
 rooter =
   # Routing
   init: ->
-    console.log "routes", rooter.routes
     rooter.hash.pendingTeardown = (cb) -> cb()
     rooter.hash.listen rooter.test
     return rooter.hash.check() if rooter.hash.check
@@ -65,35 +61,32 @@ rooter =
     return
 
   runBeforeFilters: (destination, routeInput, cb) ->
-    console.log "about to run before filters for #{destination.name}"
     runFilters = (filterArray) ->
-      console.log "destination is currently #{destination.name}"
       if filterArray.length is 0
-        console.log "done running filters, returning... and destination is #{destination.name}"
         return cb null
       filterArray.shift() routeInput, (err) ->
-        console.log "ran a filter"
-        console.log "it returned: #{err}"
         return cb err if err
-        console.log "gonna run another filter"
         runFilters filterArray
 
     filters = destination.beforeFilters.slice 0
     runFilters filters
 
   test: (attemptedHash) ->
-    #TODO move async shit out of for loop
-    for url, destination of rooter.routes
-      if matches = destination.pattern.exec attemptedHash
-        routeInput = {}
-        if destination.paramNames
-          args = matches[1..]
-          routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
-        rooter.runBeforeFilters destination, routeInput, (err) ->
-          unless err
-            hash.pendingTeardown = destination.teardown
-            destination.setup routeInput
-    return
+    getDestination = () ->
+      for url, destination of rooter.routes
+        return [destination, matches] if matches = destination.pattern.exec attemptedHash
+      return [null, null]
+
+    [destination, matches] = getDestination()
+    return unless destination
+    routeInput = {}
+    if destination.paramNames
+      args = matches[1..]
+      routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
+    rooter.runBeforeFilters destination, routeInput, (err) ->
+      unless err
+        hash.pendingTeardown = destination.teardown
+        destination.setup routeInput
 
   addBeforeFilter: (expr, filter) ->
     return unless rooter.routes[expr]
