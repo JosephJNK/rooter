@@ -1,5 +1,6 @@
 (function() {
-  var hash, hashTimer, rooter;
+  var hash, hashTimer, rooter,
+    __slice = Array.prototype.slice;
 
   hash = {
     listeners: [],
@@ -74,11 +75,12 @@
     route: function(expr, setup, teardown) {
       var pattern;
       pattern = "^" + expr + "$";
-      pattern = pattern.replace(/([?=,\/])/g, '\\$1').replace(/:([\w\d]+)/g, '([^/]*)');
+      pattern = pattern.replace(/([?=,\/])/g, '\\$1').replace(/:([\w\d]+)/g, '([^/]*)').replace(/(\?)\$/g, '\?(.*)');
       rooter.routes[expr] = {
         name: expr,
         paramNames: expr.match(/:([\w\d]+)/g),
         pattern: new RegExp(pattern),
+        queryString: expr.indexOf('?') === -1 ? false : true,
         setup: setup,
         teardown: teardown ? teardown : function(cb) {
           return cb();
@@ -99,7 +101,7 @@
       return runFilters(filters);
     },
     test: function(attemptedHash) {
-      var args, destination, getDestination, idx, matches, name, routeInput, _len, _ref, _ref2;
+      var args, destination, getDestination, idx, junk, matches, name, queryString, routeInput, _i, _len, _ref, _ref2;
       getDestination = function() {
         var destination, matches, url, _ref;
         _ref = rooter.routes;
@@ -122,10 +124,13 @@
           routeInput[name.substring(1)] = args[idx];
         }
       }
+      if (destination.queryString && attemptedHash.indexOf('?' !== -1)) {
+        junk = 2 <= matches.length ? __slice.call(matches, 0, _i = matches.length - 1) : (_i = 0, []), queryString = matches[_i++];
+      }
       return rooter.runBeforeFilters(destination, routeInput, function(err) {
         if (!err) {
           hash.pendingTeardown = destination.teardown;
-          return destination.setup(routeInput);
+          return destination.setup(routeInput, queryString);
         }
       });
     },

@@ -49,12 +49,14 @@ rooter =
     pattern = pattern
       .replace(/([?=,\/])/g, '\\$1') # escape
       .replace(/:([\w\d]+)/g, '([^/]*)') # name
+      .replace(/(\?)\$/g, '\?(.*)') # query string
       #.replace(/\*([\w\d]+)/g, '(.*?)') # splat
 
     rooter.routes[expr] =
-      name: expr #removeme
+      name: expr #removeme - for debugging
       paramNames: expr.match /:([\w\d]+)/g
       pattern: new RegExp pattern
+      queryString: if expr.indexOf('?') is -1 then false else true
       setup: setup
       teardown: if teardown then teardown else (cb) -> cb()
       beforeFilters: []
@@ -83,10 +85,12 @@ rooter =
     if destination.paramNames
       args = matches[1..]
       routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
+    if destination.queryString and attemptedHash.indexOf '?' isnt -1
+      [junk..., queryString] = matches
     rooter.runBeforeFilters destination, routeInput, (err) ->
       unless err
         hash.pendingTeardown = destination.teardown
-        destination.setup routeInput
+        destination.setup routeInput, queryString
 
   addBeforeFilter: (expr, filter) ->
     return unless rooter.routes[expr]
