@@ -76,7 +76,6 @@
       var pattern;
       pattern = "^" + expr + "$";
       pattern = pattern.replace(/([?=,\/])/g, '\\$1').replace(/:([\w\d]+)/g, '([^/]*)').replace(/(\$)$/g, '(?:\\?(.*))?$');
-      console.log("pattern: ", pattern);
       rooter.routes[expr] = {
         name: expr,
         paramNames: expr.match(/:([\w\d]+)/g),
@@ -114,7 +113,6 @@
         return [null, null];
       };
       _ref = getDestination(), destination = _ref[0], matches = _ref[1];
-      console.log("matches: ", matches);
       if (!destination) return;
       routeInput = {};
       if (destination.paramNames) {
@@ -131,7 +129,6 @@
       return rooter.runBeforeFilters(destination, routeInput, function(err) {
         if (!err) {
           hash.pendingTeardown = destination.teardown;
-          console.log("queryString: ", queryString);
           return destination.setup(routeInput, queryString);
         }
       });

@@ -52,8 +52,6 @@ rooter =
       .replace(/(\$)$/g, '(?:\\?(.*))?$') # query string
       #.replace(/\*([\w\d]+)/g, '(.*?)') # splat
 
-    console.log "pattern: ", pattern
-
     rooter.routes[expr] =
       name: expr #removeme - for debugging
       paramNames: expr.match /:([\w\d]+)/g
@@ -81,7 +79,6 @@ rooter =
       return [null, null]
 
     [destination, matches] = getDestination()
-    console.log "matches: ", matches
     return unless destination
     routeInput = {}
     if destination.paramNames
@@ -92,7 +89,6 @@ rooter =
     rooter.runBeforeFilters destination, routeInput, (err) ->
       unless err
         hash.pendingTeardown = destination.teardown
-        console.log "queryString: ", queryString
         destination.setup routeInput, queryString
 
   addBeforeFilter: (expr, filter) ->
