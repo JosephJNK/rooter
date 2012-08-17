@@ -75,13 +75,12 @@
     route: function(expr, setup, teardown) {
       var pattern;
       pattern = "^" + expr + "$";
-      pattern = pattern.replace(/([?=,\/])/g, '\\$1').replace(/:([\w\d]+)/g, '([^/]*)').replace(/(\\\?)/g, '(?:\\?(.*))?');
+      pattern = pattern.replace(/([?=,\/])/g, '\\$1').replace(/:([\w\d]+)/g, '([^/]*)').replace(/(\$)$/g, '(?:\\?(.*))?$');
       console.log("pattern: ", pattern);
       rooter.routes[expr] = {
         name: expr,
         paramNames: expr.match(/:([\w\d]+)/g),
         pattern: new RegExp(pattern),
-        queryString: expr.indexOf('?') === -1 ? false : true,
         setup: setup,
         teardown: teardown ? teardown : function(cb) {
           return cb();
@@ -115,6 +114,7 @@
         return [null, null];
       };
       _ref = getDestination(), destination = _ref[0], matches = _ref[1];
+      console.log("matches: ", matches);
       if (!destination) return;
       routeInput = {};
       if (destination.paramNames) {
@@ -125,12 +125,13 @@
           routeInput[name.substring(1)] = args[idx];
         }
       }
-      if (destination.queryString && attemptedHash.indexOf('?' !== -1)) {
+      if (attemptedHash.indexOf('?' !== -1)) {
         junk = 2 <= matches.length ? __slice.call(matches, 0, _i = matches.length - 1) : (_i = 0, []), queryString = matches[_i++];
       }
       return rooter.runBeforeFilters(destination, routeInput, function(err) {
         if (!err) {
           hash.pendingTeardown = destination.teardown;
+          console.log("queryString: ", queryString);
           return destination.setup(routeInput, queryString);
         }
       });

@@ -49,7 +49,7 @@ rooter =
     pattern = pattern
       .replace(/([?=,\/])/g, '\\$1') # escape
       .replace(/:([\w\d]+)/g, '([^/]*)') # name
-      .replace(/(\\\?)/g, '(?:\\?(.*))?') # query string
+      .replace(/(\$)$/g, '(?:\\?(.*))?$') # query string
       #.replace(/\*([\w\d]+)/g, '(.*?)') # splat
 
     console.log "pattern: ", pattern
@@ -58,7 +58,6 @@ rooter =
       name: expr #removeme - for debugging
       paramNames: expr.match /:([\w\d]+)/g
       pattern: new RegExp pattern
-      queryString: if expr.indexOf('?') is -1 then false else true
       setup: setup
       teardown: if teardown then teardown else (cb) -> cb()
       beforeFilters: []
@@ -82,16 +81,18 @@ rooter =
       return [null, null]
 
     [destination, matches] = getDestination()
+    console.log "matches: ", matches
     return unless destination
     routeInput = {}
     if destination.paramNames
       args = matches[1..]
       routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
-    if destination.queryString and attemptedHash.indexOf '?' isnt -1
+    if attemptedHash.indexOf '?' isnt -1
       [junk..., queryString] = matches
     rooter.runBeforeFilters destination, routeInput, (err) ->
       unless err
         hash.pendingTeardown = destination.teardown
+        console.log "queryString: ", queryString
         destination.setup routeInput, queryString
 
   addBeforeFilter: (expr, filter) ->
