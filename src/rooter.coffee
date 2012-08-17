@@ -49,8 +49,10 @@ rooter =
     pattern = pattern
       .replace(/([?=,\/])/g, '\\$1') # escape
       .replace(/:([\w\d]+)/g, '([^/]*)') # name
-      .replace(/(\?)\$/g, '\?(.*)') # query string
+      .replace(/(\\\?)/g, '(?:\\?(.*))?') # query string
       #.replace(/\*([\w\d]+)/g, '(.*?)') # splat
+
+    console.log "pattern: ", pattern
 
     rooter.routes[expr] =
       name: expr #removeme - for debugging
