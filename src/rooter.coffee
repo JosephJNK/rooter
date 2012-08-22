@@ -4,8 +4,9 @@ hash =
   listen: (fn) -> rooter.hash.listeners.push fn
   trigger: (newHash=rooter.hash.value()) ->
     newHash = "/" if newHash is ""
-    hash.pendingTeardown ->
-      hash.pendingTeardown = (cb) -> cb()
+    rooter.hash.pendingTeardown ?= (cb) -> cb()
+    rooter.hash.pendingTeardown ->
+      rooter.hash.pendingTeardown = (cb) -> cb()
       fn newHash for fn in rooter.hash.listeners
       return
   value: (newHash) ->
@@ -61,12 +62,15 @@ rooter =
       beforeFilters: []
     return
 
-  runBeforeFilters: (destination, routeInput, cb) ->
+  runBeforeFilters: (destination, routeInput={}, cb) ->
+    currentArgs = routeInput
     runFilters = (filterArray) ->
       if filterArray.length is 0
-        return cb null
-      filterArray.shift() routeInput, (err) ->
-        return cb err if err
+        return cb null, currentArgs
+      currentFunction = filterArray.shift()
+      currentFunction currentArgs, (err, newArgs=currentArgs) ->
+        currentArgs = newArgs
+        return cb err if err?
         runFilters filterArray
 
     filters = destination.beforeFilters.slice 0
@@ -86,10 +90,10 @@ rooter =
       routeInput[name.substring(1)] = args[idx] for name, idx in destination.paramNames
     if attemptedHash.indexOf '?' isnt -1
       [junk..., queryString] = matches
-    rooter.runBeforeFilters destination, routeInput, (err) ->
+    rooter.runBeforeFilters destination, routeInput, (err, modifiedArgs) ->
       unless err
         hash.pendingTeardown = destination.teardown
-        destination.setup routeInput, queryString
+        destination.setup modifiedArgs, queryString
 
   addBeforeFilter: (expr, filter) ->
     return unless rooter.routes[expr]
